@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 #include <string.h>
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -69,6 +70,54 @@ static const char *TAG = "wifi station";
 
 static int s_retry_num = 0;
 
+static void log_country_info(const char *prefix, const wifi_country_t *country)
+{
+    ESP_LOGI(TAG, "%s country: cc=%s schan=%u nchan=%u max_tx_power=%d policy=%s",
+             prefix, country->cc, country->schan, country->nchan, country->max_tx_power,
+             country->policy == WIFI_COUNTRY_POLICY_MANUAL ? "MANUAL" : "AUTO");
+#if CONFIG_SOC_WIFI_SUPPORT_5G
+    ESP_LOGI(TAG, "%s country: wifi_5g_channel_mask=0x%08" PRIx32,
+             prefix, country->wifi_5g_channel_mask);
+#endif
+}
+
+static void configure_country_and_channels(void)
+{
+    wifi_country_t country = {0};
+
+    ESP_ERROR_CHECK(esp_wifi_set_country_code("TW", true));
+    ESP_ERROR_CHECK(esp_wifi_get_country(&country));
+    log_country_info("After esp_wifi_set_country_code(TW)", &country);
+
+    country.policy = WIFI_COUNTRY_POLICY_MANUAL;
+    country.schan = 1;
+    country.nchan = 11;
+
+#if CONFIG_SOC_WIFI_SUPPORT_5G
+    uint32_t allowed_5g_channels = country.wifi_5g_channel_mask;
+    if (allowed_5g_channels == 0) {
+        allowed_5g_channels =
+            WIFI_CHANNEL_36  | WIFI_CHANNEL_40  | WIFI_CHANNEL_44  | WIFI_CHANNEL_48  |
+            WIFI_CHANNEL_52  | WIFI_CHANNEL_56  | WIFI_CHANNEL_60  | WIFI_CHANNEL_64  |
+            WIFI_CHANNEL_100 | WIFI_CHANNEL_104 | WIFI_CHANNEL_108 | WIFI_CHANNEL_112 |
+            WIFI_CHANNEL_116 | WIFI_CHANNEL_120 | WIFI_CHANNEL_124 | WIFI_CHANNEL_128 |
+            WIFI_CHANNEL_132 | WIFI_CHANNEL_136 | WIFI_CHANNEL_140 | WIFI_CHANNEL_144 |
+            WIFI_CHANNEL_149 | WIFI_CHANNEL_153 | WIFI_CHANNEL_157 | WIFI_CHANNEL_161 |
+            WIFI_CHANNEL_165 | WIFI_CHANNEL_169 | WIFI_CHANNEL_173 | WIFI_CHANNEL_177;
+    }
+
+    allowed_5g_channels &= ~(WIFI_CHANNEL_144 |
+                             WIFI_CHANNEL_169 |
+                             WIFI_CHANNEL_173 |
+                             WIFI_CHANNEL_177);
+    country.wifi_5g_channel_mask = allowed_5g_channels;
+#endif
+
+    ESP_ERROR_CHECK(esp_wifi_set_country(&country));
+    ESP_ERROR_CHECK(esp_wifi_get_country(&country));
+    log_country_info("After manual channel restriction", &country);
+}
+
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
@@ -103,6 +152,7 @@ void wifi_init_sta(void)
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    configure_country_and_channels();
 
     esp_event_handler_instance_t instance_any_id;
     esp_event_handler_instance_t instance_got_ip;
