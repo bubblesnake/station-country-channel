@@ -118,6 +118,24 @@ static void configure_country_and_channels(void)
     log_country_info("After manual channel restriction", &country);
 }
 
+static void configure_5g_ht40_for_c5(void)
+{
+#if CONFIG_ESP_STATION_EXAMPLE_5G_HT40 && CONFIG_SOC_WIFI_SUPPORT_5G
+    wifi_protocols_t protocols = {0};
+    wifi_bandwidths_t bandwidths = {0};
+
+    ESP_ERROR_CHECK(esp_wifi_get_protocols(WIFI_IF_STA, &protocols));
+    protocols.ghz_5g = WIFI_PROTOCOL_11A | WIFI_PROTOCOL_11N;
+    ESP_ERROR_CHECK(esp_wifi_set_protocols(WIFI_IF_STA, &protocols));
+
+    ESP_ERROR_CHECK(esp_wifi_get_bandwidths(WIFI_IF_STA, &bandwidths));
+    bandwidths.ghz_5g = WIFI_BW_HT40;
+    ESP_ERROR_CHECK(esp_wifi_set_bandwidths(WIFI_IF_STA, &bandwidths));
+
+    ESP_LOGI(TAG, "5GHz HT40 enabled: set max 5G protocol to 11n");
+#endif
+}
+
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
@@ -183,6 +201,7 @@ void wifi_init_sta(void)
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
+    configure_5g_ht40_for_c5();
     ESP_ERROR_CHECK(esp_wifi_start() );
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");

@@ -35,6 +35,34 @@ See the Getting Started Guide for all the steps to configure and use the ESP-IDF
 * [ESP-IDF Getting Started Guide on ESP32-S2](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/get-started/index.html)
 * [ESP-IDF Getting Started Guide on ESP32-C3](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/get-started/index.html)
 
+## Project-Specific Changes
+
+This project is based on the ESP-IDF `wifi/getting_started/station` example and includes the following custom behavior:
+
+1. Country code is set to `TW` using `esp_wifi_set_country_code("TW", true)`.
+2. Country information is read and printed with `esp_wifi_get_country()` before and after manual restriction.
+3. Country policy is forced to manual and 2.4 GHz channels are limited to `1-11` (channels `12, 13, 14` disabled).
+4. For 5 GHz-capable targets, these 20 MHz channels are disabled from the country mask:
+   `144, 169, 173, 177`.
+5. A project config option was added:
+   `Example Configuration -> Enable 5GHz 40MHz bandwidth (C5)`.
+   If enabled, the station config sets:
+   - 5 GHz max protocol to `802.11n` (required for HT40)
+   - 5 GHz bandwidth to `WIFI_BW_HT40`
+
+### Build and Flash for ESP32-C5
+
+```bash
+idf.py set-target esp32c5
+idf.py -p <port> flash monitor
+```
+
+If you are in an environment where component manager access is restricted, use:
+
+```bash
+IDF_COMPONENT_MANAGER=0 idf.py -p <port> flash monitor
+```
+
 ## Example Output
 Note that the output, in particular the order of the output, may vary depending on the environment.
 

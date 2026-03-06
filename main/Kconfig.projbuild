@@ -66,4 +66,12 @@ menu "Example Configuration"
             bool "WAPI PSK"
     endchoice
 
+    config ESP_STATION_EXAMPLE_5G_HT40
+        bool "Enable 5GHz 40MHz bandwidth (C5)"
+        depends on SOC_WIFI_SUPPORT_5G
+        default n
+        help
+            Enable 5 GHz HT40 bandwidth on STA by setting 5 GHz max protocol to 802.11n,
+            which is required for 40 MHz operation.
+
 endmenu
